@@ -506,7 +506,7 @@ class WebHookRequestHandler {
                         expCacheLock.unlock()
                         if trainerXP != oldExp {
                             do {
-                                try Account.setTotalExp(mysql: mysql, username: username!, total_exp: trainerXP)
+                                try Account.setTotalExp(mysql: mysql, username: username!, totalExp: trainerXP)
                                 expCacheLock.lock()
                                 expCache[username!] = trainerXP
                                 expCacheLock.unlock()

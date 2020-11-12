@@ -300,7 +300,7 @@ class Account: WebHookEvent {
         }
     }
 
-    public static func setTotalExp(mysql: MySQL?=nil, username: String, total_exp: Int) throws {
+    public static func setTotalExp(mysql: MySQL?=nil, username: String, totalExp: Int) throws {
 
         guard let mysql = mysql ?? DBController.global.mysql else {
             Log.error(message: "[ACCOUNT] Failed to connect to database.")
@@ -314,7 +314,7 @@ class Account: WebHookEvent {
                 WHERE username = ?
             """
         _ = mysqlStmt.prepare(statement: sql)
-        mysqlStmt.bindParam(total_exp)
+        mysqlStmt.bindParam(totalExp)
         mysqlStmt.bindParam(username)
 
         guard mysqlStmt.execute() else {

@@ -511,8 +511,8 @@ class WebHookRequestHandler {
                             expCacheLock.unlock()
                         } catch {}
                     }
-                    Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Updating total_exp in db " +
-                    "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
+                    Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Updated total_exp in db " +
+                    "\(String(format: "%.3f", Date().timeIntervalSince(mysqlStart)))s")
                 }
             }
 

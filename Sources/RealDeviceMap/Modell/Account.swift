@@ -300,7 +300,7 @@ class Account: WebHookEvent {
         }
     }
 
-    public static func setExp(mysql: MySQL?=nil, username: String, total_exp: Int) throws {
+    public static func setExp(mysql: MySQL?=nil, username: String, total_exp: UInt32) throws {
 
         guard let mysql = mysql ?? DBController.global.mysql else {
             Log.error(message: "[ACCOUNT] Failed to connect to database.")

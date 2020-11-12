@@ -498,23 +498,21 @@ class WebHookRequestHandler {
                 Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Holo Inventory parsed in " +
                 "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
 
-                if trainerXP > 0 {
-                    guard !InstanceController.global.shouldStoreExp(deviceUUID: uuid ?? "") else {
-                        let mysqlStart = Date()
-                        expCacheLock.lock()
-                        let oldExp = expCache[username!]
-                        expCacheLock.unlock()
-                        if trainerXP != oldExp {
-                            do {
-                                try Account.setTotalExp(mysql: mysql, username: username!, totalExp: trainerXP)
-                                expCacheLock.lock()
-                                expCache[username!] = trainerXP
-                                expCacheLock.unlock()
-                            } catch {}
-                        }
-                        Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Updating total_exp in db " +
-                        "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
+                if trainerXP > 0 && InstanceController.global.shouldStoreExp(deviceUUID: uuid ?? "") {
+                    let mysqlStart = Date()
+                    expCacheLock.lock()
+                    let oldExp = expCache[username!]
+                    expCacheLock.unlock()
+                    if trainerXP != oldExp {
+                        do {
+                            try Account.setTotalExp(mysql: mysql, username: username!, totalExp: trainerXP)
+                            expCacheLock.lock()
+                            expCache[username!] = trainerXP
+                            expCacheLock.unlock()
+                        } catch {}
                     }
+                    Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Updating total_exp in db " +
+                    "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
                 }
             }
 

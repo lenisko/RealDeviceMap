@@ -32,7 +32,7 @@ class WebHookRequestHandler {
     private static var levelCache = [String: Int]()
 
     private static let expCacheLock = Threading.Lock()
-    private static var expCache = [String: UInt32]()
+    private static var expCache = [String: Int]()
 
     private static let emptyCellsLock = Threading.Lock()
     private static var emptyCells = [UInt64: Int]()

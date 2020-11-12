@@ -499,20 +499,22 @@ class WebHookRequestHandler {
                 "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
 
                 if trainerXP > 0 {
-                    let mysqlStart = Date()
-                    expCacheLock.lock()
-                    let oldExp = expCache[username!]
-                    expCacheLock.unlock()
-                    if oldExp != trainerXP {
-                        do {
-                            try Account.setExp(mysql: mysql, username: username!, total_exp: trainerXP)
-                            expCacheLock.lock()
-                            expCache[username!] = trainerXP
-                            expCacheLock.unlock()
-                        } catch {}
+                    guard !InstanceController.global.shouldStoreExp(deviceUUID: uuid ?? "") else {
+                        let mysqlStart = Date()
+                        expCacheLock.lock()
+                        let oldExp = expCache[username!]
+                        expCacheLock.unlock()
+                        if trainerXP != oldExp {
+                            do {
+                                try Account.setExp(mysql: mysql, username: username!, total_exp: trainerXP)
+                                expCacheLock.lock()
+                                expCache[username!] = trainerXP
+                                expCacheLock.unlock()
+                            } catch {}
+                        }
+                        Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Updating total_exp in db " +
+                        "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
                     }
-                    Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] set exp in mysql " +
-                    "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
                 }
             }
 

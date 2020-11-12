@@ -31,6 +31,9 @@ class WebHookRequestHandler {
     private static let levelCacheLock = Threading.Lock()
     private static var levelCache = [String: Int]()
 
+    private static let expCacheLock = Threading.Lock()
+    private static var expCache = [String: UInt32]()
+
     private static let emptyCellsLock = Threading.Lock()
     private static var emptyCells = [UInt64: Int]()
 
@@ -125,7 +128,7 @@ class WebHookRequestHandler {
         }
 
         let trainerLevel = json["trainerlvl"] as? Int ?? (json["trainerLevel"] as? String)?.toInt() ?? 0
-        let trainerXP = json["trainerexp"] as? Int ?? 0
+        var trainerXP = json["trainerexp"] as? Int ?? 0
         let username = json["username"] as? String
         let controller = uuid != nil ? InstanceController.global.getInstanceController(deviceUUID: uuid!) : nil
         let isEvent = controller?.isEvent ?? false
@@ -141,10 +144,6 @@ class WebHookRequestHandler {
                     levelCacheLock.unlock()
                 } catch {}
             }
-        }
-
-        if username != nil && trainerXP > 0 && trainerLevel > 0 {
-            InstanceController.global.gotPlayerInfo(username: username!, level: trainerLevel, xp: trainerXP)
         }
 
         guard let contents = json["contents"] as? [[String: Any]] ??
@@ -174,6 +173,7 @@ class WebHookRequestHandler {
         var fortSearch = [POGOProtos_Networking_Responses_FortSearchResponse]()
         var encounters = [POGOProtos_Networking_Responses_EncounterResponse]()
         var playerdatas = [POGOProtos_Networking_Responses_GetPlayerResponse]()
+        var holodatas = [POGOProtos_Networking_Responses_GetHoloInventoryResponse]()
         var cells = [UInt64]()
 
         var isEmtpyGMO = true
@@ -217,6 +217,12 @@ class WebHookRequestHandler {
                     playerdatas.append(gpr)
                 } else {
                     Log.info(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Malformed GetPlayerResponse")
+                }
+            } else if method == 4 {
+                if let hir = try? POGOProtos_Networking_Responses_GetHoloInventoryResponse(serializedData: data) {
+                    holodatas.append(hir)
+                } else {
+                    Log.info(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Malformed GetHoloInventoryResponse")
                 }
             } else if method == 101 {
                 if let fsr = try? POGOProtos_Networking_Responses_FortSearchResponse(serializedData: data) {
@@ -478,6 +484,40 @@ class WebHookRequestHandler {
                 }
                 Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Player Detail parsed in " +
                                    "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
+            }
+
+            if !holodatas.isEmpty && username != nil {
+                let start = Date()
+                for holodata in holodatas {
+                    let items = holodata.inventoryDelta.inventoryItems
+                    for item in items {
+                        let playerstats = item.inventoryItemData.playerStats
+                        trainerXP = Int(playerstats.experience) > 0 ? Int(playerstats.experience) : trainerXP
+                    }
+                }
+                Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] Holo Inventory parsed in " +
+                "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
+
+                if trainerXP > 0 {
+                    let mysqlStart = Date()
+                    expCacheLock.lock()
+                    let oldExp = expCache[username!]
+                    expCacheLock.unlock()
+                    if oldExp != trainerXP {
+                        do {
+                            try Account.setExp(mysql: mysql, username: username!, total_exp: trainerXP)
+                            expCacheLock.lock()
+                            expCache[username!] = trainerXP
+                            expCacheLock.unlock()
+                        } catch {}
+                    }
+                    Log.debug(message: "[WebHookRequestHandler] [\(uuid ?? "?")] set exp in mysql " +
+                    "\(String(format: "%.3f", Date().timeIntervalSince(start)))s")
+                }
+            }
+
+            if username != nil && trainerXP > 0 && trainerLevel > 0 {
+                InstanceController.global.gotPlayerInfo(username: username!, level: trainerLevel, xp: trainerXP)
             }
 
             guard InstanceController.global.shouldStoreData(deviceUUID: uuid ?? "") else {
